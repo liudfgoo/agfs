@@ -4,13 +4,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 
 	"github.com/c4pt0r/agfs/agfs-server/pkg/plugin"
 	"github.com/c4pt0r/agfs/agfs-server/pkg/plugin/api"
-	"github.com/ebitengine/purego"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -205,11 +203,8 @@ func (pl *PluginLoader) loadNativePlugin(libraryPath string) (plugin.ServicePlug
 		log.Infof("Created temp copy at: %s", absPath)
 	}
 
-	// Determine dlopen flags based on platform
-	flags := getDlopenFlags()
-
-	// Open the shared library
-	libHandle, err := purego.Dlopen(absPath, flags)
+	// Open the shared library (platform-specific)
+	libHandle, err := openNativeLib(absPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open library %s: %w", absPath, err)
 	}
@@ -395,43 +390,31 @@ func loadPluginVTable(libHandle uintptr) (*api.PluginVTable, error) {
 	vtable := &api.PluginVTable{}
 
 	// Required functions
-	if err := loadFunc(libHandle, "PluginNew", &vtable.PluginNew); err != nil {
+	if err := loadNativeFunc(libHandle, "PluginNew", &vtable.PluginNew); err != nil {
 		return nil, fmt.Errorf("missing required function PluginNew: %w", err)
 	}
 
 	// Optional lifecycle functions
-	loadFunc(libHandle, "PluginFree", &vtable.PluginFree)
-	loadFunc(libHandle, "PluginName", &vtable.PluginName)
-	loadFunc(libHandle, "PluginValidate", &vtable.PluginValidate)
-	loadFunc(libHandle, "PluginInitialize", &vtable.PluginInitialize)
-	loadFunc(libHandle, "PluginShutdown", &vtable.PluginShutdown)
-	loadFunc(libHandle, "PluginGetReadme", &vtable.PluginGetReadme)
+	loadNativeFunc(libHandle, "PluginFree", &vtable.PluginFree)
+	loadNativeFunc(libHandle, "PluginName", &vtable.PluginName)
+	loadNativeFunc(libHandle, "PluginValidate", &vtable.PluginValidate)
+	loadNativeFunc(libHandle, "PluginInitialize", &vtable.PluginInitialize)
+	loadNativeFunc(libHandle, "PluginShutdown", &vtable.PluginShutdown)
+	loadNativeFunc(libHandle, "PluginGetReadme", &vtable.PluginGetReadme)
 
 	// Optional filesystem functions
-	loadFunc(libHandle, "FSCreate", &vtable.FSCreate)
-	loadFunc(libHandle, "FSMkdir", &vtable.FSMkdir)
-	loadFunc(libHandle, "FSRemove", &vtable.FSRemove)
-	loadFunc(libHandle, "FSRemoveAll", &vtable.FSRemoveAll)
-	loadFunc(libHandle, "FSRead", &vtable.FSRead)
-	loadFunc(libHandle, "FSWrite", &vtable.FSWrite)
-	loadFunc(libHandle, "FSReadDir", &vtable.FSReadDir)
-	loadFunc(libHandle, "FSStat", &vtable.FSStat)
-	loadFunc(libHandle, "FSRename", &vtable.FSRename)
-	loadFunc(libHandle, "FSChmod", &vtable.FSChmod)
+	loadNativeFunc(libHandle, "FSCreate", &vtable.FSCreate)
+	loadNativeFunc(libHandle, "FSMkdir", &vtable.FSMkdir)
+	loadNativeFunc(libHandle, "FSRemove", &vtable.FSRemove)
+	loadNativeFunc(libHandle, "FSRemoveAll", &vtable.FSRemoveAll)
+	loadNativeFunc(libHandle, "FSRead", &vtable.FSRead)
+	loadNativeFunc(libHandle, "FSWrite", &vtable.FSWrite)
+	loadNativeFunc(libHandle, "FSReadDir", &vtable.FSReadDir)
+	loadNativeFunc(libHandle, "FSStat", &vtable.FSStat)
+	loadNativeFunc(libHandle, "FSRename", &vtable.FSRename)
+	loadNativeFunc(libHandle, "FSChmod", &vtable.FSChmod)
 
 	return vtable, nil
-}
-
-// loadFunc loads a single function from the library
-func loadFunc(libHandle uintptr, name string, fptr interface{}) error {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Debugf("Function %s not found in library (this may be ok if optional)", name)
-		}
-	}()
-
-	purego.RegisterLibFunc(fptr, libHandle, name)
-	return nil
 }
 
 // copyFile copies a file from src to dst
@@ -447,25 +430,4 @@ func copyFile(src, dst string) error {
 	}
 
 	return nil
-}
-
-// getDlopenFlags returns platform-specific dlopen flags
-func getDlopenFlags() int {
-	// RTLD_NOW = resolve all symbols immediately
-	// RTLD_LOCAL = symbols not available for subsequently loaded libraries
-	const (
-		RTLD_NOW   = 0x2
-		RTLD_LAZY  = 0x1
-		RTLD_LOCAL = 0x0
-	)
-
-	switch runtime.GOOS {
-	case "darwin", "linux":
-		return RTLD_NOW | RTLD_LOCAL
-	case "windows":
-		// Windows doesn't use the same flags, but purego handles this
-		return 0
-	default:
-		return RTLD_NOW | RTLD_LOCAL
-	}
 }

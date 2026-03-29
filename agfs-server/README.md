@@ -258,12 +258,36 @@ All API endpoints are prefixed with `/api/v1/`.
 ### Requirements
 -   Go 1.21+
 -   Make
+-   **Windows**: No additional C compiler required for native plugin support
 
 ### Commands
 -   `make build`: Build the server binary.
 -   `make test`: Run tests.
 -   `make dev`: Run the server in development mode.
 -   `make install`: Install the binary to `$GOPATH/bin`.
+
+### Building on Windows
+
+The project supports building natively on Windows. The native plugin loader uses platform-specific implementations:
+
+| Platform | Library Loading | Symbol Resolution |
+|----------|----------------|-------------------|
+| Linux / macOS | `purego.Dlopen` | `purego.RegisterLibFunc` |
+| Windows | `golang.org/x/sys/windows.LoadLibrary` | `windows.GetProcAddress` + `purego.RegisterFunc` |
+
+The platform abstraction is implemented in:
+- `pkg/plugin/loader/loader.go` — Common loader logic
+- `pkg/plugin/loader/loader_unix.go` — Linux/macOS implementation (uses `purego`)
+- `pkg/plugin/loader/loader_windows.go` — Windows implementation (uses `golang.org/x/sys/windows`)
+
+To build on Windows:
+
+```bash
+cd agfs-server
+make build
+```
+
+The compiled binary will be at `build/agfs-server` (or `build/agfs-server.exe` on Windows).
 
 ## License
 

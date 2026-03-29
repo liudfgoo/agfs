@@ -16,6 +16,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/tetratelabs/wazero v1.9.0
 	github.com/zeebo/xxh3 v1.0.2
+	golang.org/x/sys v0.28.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -37,7 +38,6 @@ require (
 	github.com/aws/smithy-go v1.23.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
-	golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8 // indirect
 )
 
 replace github.com/c4pt0r/agfs/agfs-sdk/go => ../agfs-sdk/go

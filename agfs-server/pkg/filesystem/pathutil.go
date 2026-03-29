@@ -1,7 +1,7 @@
 package filesystem
 
 import (
-	"path/filepath"
+	"path"
 	"strings"
 )
 
@@ -10,32 +10,35 @@ import (
 // - Adds leading "/" if missing
 // - Cleans the path (removes .., ., etc.)
 // - Removes trailing slashes (except for root "/")
+// - Always uses forward slashes (POSIX-style), even on Windows
 //
 // This is used by most filesystem implementations (memfs, sqlfs, httpfs, etc.)
-func NormalizePath(path string) string {
-	if path == "" || path == "/" {
+func NormalizePath(p string) string {
+	if p == "" || p == "/" {
 		return "/"
 	}
 
 	// Ensure leading slash
-	if !strings.HasPrefix(path, "/") {
-		path = "/" + path
+	if !strings.HasPrefix(p, "/") {
+		p = "/" + p
 	}
 
 	// Clean the path (resolve .., ., etc.)
-	path = filepath.Clean(path)
+	// Use path.Clean (POSIX) instead of filepath.Clean (OS-specific)
+	// because AGFS uses virtual filesystem paths with forward slashes.
+	p = path.Clean(p)
 
-	// filepath.Clean can return "." for some inputs
-	if path == "." {
+	// path.Clean can return "." for some inputs
+	if p == "." {
 		return "/"
 	}
 
 	// Remove trailing slash (Clean might leave it in some cases)
-	if len(path) > 1 && strings.HasSuffix(path, "/") {
-		path = path[:len(path)-1]
+	if len(p) > 1 && strings.HasSuffix(p, "/") {
+		p = p[:len(p)-1]
 	}
 
-	return path
+	return p
 }
 
 // NormalizeS3Key normalizes an S3 object key.
@@ -45,21 +48,21 @@ func NormalizePath(path string) string {
 // - Cleans the path
 //
 // This is used specifically by s3fs plugin.
-func NormalizeS3Key(path string) string {
-	if path == "" || path == "/" {
+func NormalizeS3Key(p string) string {
+	if p == "" || p == "/" {
 		return ""
 	}
 
 	// Remove leading slash (S3 keys don't have them)
-	path = strings.TrimPrefix(path, "/")
+	p = strings.TrimPrefix(p, "/")
 
-	// Clean the path
-	path = filepath.Clean(path)
+	// Clean the path (use path.Clean for POSIX-style paths)
+	p = path.Clean(p)
 
-	// filepath.Clean returns "." for empty/root paths
-	if path == "." {
+	// path.Clean returns "." for empty/root paths
+	if p == "." {
 		return ""
 	}
 
-	return path
+	return p
 }

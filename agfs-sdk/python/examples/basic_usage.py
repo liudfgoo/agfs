@@ -22,8 +22,16 @@ def main():
             print(f"  [{file_type}] {file['name']}")
         print()
 
-        # Create a test directory
-        test_dir = "/test_pyagfs"
+        # Mount a memory filesystem for testing
+        # (rootfs is virtual and read-only; all file operations must happen
+        #  within a mounted filesystem like memfs, localfs, etc.)
+        test_mount = "/memfs"
+        print(f"Mounting memfs at {test_mount}")
+        client.mount("memfs", test_mount, {})
+        print()
+
+        # Create a test directory inside the mounted filesystem
+        test_dir = f"{test_mount}/test_pyagfs"
         print(f"Creating directory: {test_dir}")
         client.mkdir(test_dir)
         print()
@@ -64,6 +72,10 @@ def main():
         # Clean up
         print(f"Removing directory: {test_dir}")
         client.rm(test_dir, recursive=True)
+
+        # Unmount the test filesystem
+        print(f"Unmounting {test_mount}")
+        client.unmount(test_mount)
         print("Done!")
 
     except AGFSClientError as e:

@@ -3,6 +3,7 @@ package mountablefs
 import (
 	"fmt"
 	"io"
+	stdpath "path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -1185,7 +1186,7 @@ func (mfs *MountableFS) resolveSymlink(path string) (string, bool) {
 		// If target is relative, resolve it relative to the link's directory
 		if !strings.HasPrefix(target, "/") {
 			linkDir := filepath.Dir(path)
-			target = filesystem.NormalizePath(filepath.Join(linkDir, target))
+			target = filesystem.NormalizePath(stdpath.Join(linkDir, target))
 		} else {
 			target = filesystem.NormalizePath(target)
 		}
