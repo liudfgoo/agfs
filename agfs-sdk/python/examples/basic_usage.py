@@ -22,8 +22,8 @@ def main():
             print(f"  [{file_type}] {file['name']}")
         print()
 
-        # Create a test directory
-        test_dir = "/test_pyagfs"
+        # Create a test directory under /local (allowed mount point)
+        test_dir = "/local/test_pyagfs"
         print(f"Creating directory: {test_dir}")
         client.mkdir(test_dir)
         print()
